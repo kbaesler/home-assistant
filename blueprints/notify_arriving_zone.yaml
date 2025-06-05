@@ -1,0 +1,43 @@
+blueprint:
+  name: Notify When Person Arrives in Zone
+  description: Send a notification when a selected person arrives in a chosen zone.
+  domain: automation
+  input:
+    person_entity:
+      name: Person
+      description: Select the person to monitor.
+      selector:
+        entity:
+          domain: person
+    zone_entity:
+      name: Zone
+      description: Select the zone to monitor for arrivals.
+      selector:
+        entity:
+          domain: zone
+    notify_device:
+      name: Device to Notify
+      description: Device to send the notification to.
+      selector:
+        device:
+          integration: mobile_app
+    custom_message:
+      name: Custom Message (optional)
+      description: Enter a custom notification message. Use {{ person }} and {{ zone }} for dynamic values.
+      default: "{{ person }} has arrived at {{ zone }}."
+      selector:
+        text:
+trigger:
+  - platform: zone
+    entity_id: !input person_entity
+    zone: !input zone_entity
+    event: enter
+action:
+  - variables:
+      person: "{{ state_attr(blueprint.input.person_entity, 'friendly_name') }}"
+      zone: "{{ state_attr(blueprint.input.zone_entity, 'friendly_name') }}"
+      message: "{{ iif(blueprint.input.custom_message, blueprint.input.custom_message, person ~ ' has arrived at ' ~ zone ~ '.') }}"
+  - service: notify.mobile_app_{{ device_attr(blueprint.input.notify_device, 'name')|lower|replace(' ', '_') }}
+    data:
+      message: "{{ message }}"
+mode: single
